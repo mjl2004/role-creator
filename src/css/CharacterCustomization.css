@@ -1,0 +1,90 @@
+﻿/* 引入未来感字体 */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&display=swap');
+
+.character-customization-container {
+  position: relative;
+  min-height: 100vh;
+  background-color: black;
+  overflow: hidden;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.stars-container {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.star {
+  position: absolute;
+  background-color: white;
+  border-radius: 50%;
+  animation: float linear infinite;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0 1rem;
+  position: relative;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.title {
+  color: #00f0ff; /* 科技蓝 */
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 3rem;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 5px currentColor, 0 0 10px currentColor;
+}
+
+.start-button {
+  background: transparent;
+  border: 2px solid #9d4edd; /* 科技紫 */
+  color: #9d4edd;
+  border-radius: 9999px; /* 全圆角 */
+  padding: 1rem 3rem;
+  font-size: clamp(1.2rem, 4vw, 1.8rem);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px currentColor, 0 0 20px currentColor/70, 0 0 30px currentColor/50;
+  cursor: pointer;
+}
+
+.start-button:hover {
+  background-color: rgba(157, 78, 221, 0.2);
+}
+
+.start-button:active {
+  transform: scale(0.95);
+}
+
+.start-button:focus {
+  outline: none;
+  box-shadow: 0 0 10px currentColor, 0 0 20px currentColor/70, 0 0 30px currentColor/50,
+              0 0 0 2px rgba(157, 78, 221, 0.5);
+}
+
+@keyframes float {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--x-end), var(--y-end));
+    opacity: 0;
+  }
+}
+    
