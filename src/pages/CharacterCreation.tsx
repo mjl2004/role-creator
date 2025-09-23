@@ -2,6 +2,7 @@
 import { faCheck, faArrowRight, faVenus, faMars, faBriefcase, faHeart, faStar, faMagic } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useNavigate } from 'react-router-dom';
+import { useCharacterData } from '../hooks/useCharacterData';
 import '../css/CharacterCreation.css';
 
 // 类型定义保持不变
@@ -23,9 +24,11 @@ interface CharacterClass  {
 
 const CharacterCreation: React.FC = () => {
   // 原有状态保持不变
-  const nav = useNavigate()
-  const [nickname, setNickname] = useState('');
-  const [gender, setGender] = useState<Gender>('');
+  const nav = useNavigate();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { data, setNickname, setGender, setInterests, setMainClass } = useCharacterData();
+  const [nickname, setNicknameLocal] = useState('');
+  const [gender, setGenderLocal] = useState<Gender>('');
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedClass, setSelectedClass] = useState<string>('');
@@ -124,13 +127,38 @@ const CharacterCreation: React.FC = () => {
     }
   ];
 
+  const MAX_BY_CATEGORY: Record<InterestCategory, number> = {
+    career: 2,
+    personality: 3,
+    skill: 3,
+  };
+
   // 处理兴趣选择
   const toggleInterest = (id: string) => {
-    setSelectedInterests(prev => 
-      prev.includes(id) 
-        ? prev.filter(interestId => interestId !== id)
-        : [...prev, id]
-    );
+    const option = interestOptions.find(o => o.id === id)!;
+    const category = option.category;
+  
+    setSelectedInterests(prev => {
+      const already = prev.includes(id);
+      if (already) {
+        // 取消选择：直接移除
+        return prev.filter(i => i !== id);
+      }
+  
+      // 新增选择：先统计当前类别已选数量
+      const count = prev.filter(i => {
+        const opt = interestOptions.find(o => o.id === i);
+        return opt?.category === category;
+      }).length;
+  
+      if (count >= MAX_BY_CATEGORY[category]) {
+        // 达到上限，禁止再添加
+        return prev;
+      }
+  
+      // 未超限，允许添加
+      return [...prev, id];
+    });
   };
 
   // 处理步骤导航保持不变
@@ -144,6 +172,29 @@ const CharacterCreation: React.FC = () => {
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1);
     }
+  };
+
+  const confirmNickname = () => {
+    const val = nickname.trim();
+    setNickname(val);
+    nextStep();
+  };
+
+  const confirmGender = () => {
+    setGender(gender);
+    nextStep();
+  };
+
+  const confirmInterests = () => {
+    setInterests([...selectedInterests]);
+    nextStep();
+  };
+
+  const confirmClass = () => {
+    setMainClass(selectedClass);
+    setTimeout(() => {
+      submit();
+    }, 5);
   };
 
   // 新增：星星随机出现和消失的效果
@@ -234,14 +285,14 @@ const CharacterCreation: React.FC = () => {
         <input
           type="text"
           value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
+          onChange={(e) => setNicknameLocal(e.target.value)}
           placeholder="请输入昵称"
           className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-gray-900 text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-900 focus:outline-none transition-all"
         />
       </div>
       
       <button
-        onClick={nextStep}
+        onClick={confirmNickname}
         disabled={!nickname.trim()}
         className={`px-8 py-3 rounded-lg font-medium transition-all ${
           nickname.trim()
@@ -262,7 +313,7 @@ const CharacterCreation: React.FC = () => {
       
       <div className="grid grid-cols-2 gap-6 mb-10">
         <button
-          onClick={() => setGender('male')}
+          onClick={() => setGenderLocal('male')}
           className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all ${
             gender === 'male' 
               ? 'border-purple-500 bg-purple-900/30 shadow-lg' 
@@ -281,7 +332,7 @@ const CharacterCreation: React.FC = () => {
         </button>
         
         <button
-          onClick={() => setGender('female')}
+          onClick={() => setGenderLocal('female')}
           className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 transition-all ${
             gender === 'female' 
               ? 'border-purple-500 bg-purple-900/30 shadow-lg' 
@@ -308,7 +359,7 @@ const CharacterCreation: React.FC = () => {
           上一步
         </button>
         <button
-          onClick={nextStep}
+          onClick={confirmGender}
           disabled={!gender}
           className={`px-6 py-3 rounded-lg font-medium transition-all ${
             gender
@@ -327,7 +378,7 @@ const CharacterCreation: React.FC = () => {
     <div className="flex flex-col">
       <h2 className="text-2xl font-bold text-black mb-2 text-center">选择你的兴趣</h2>
       <p className="text-gray-500 mb-8 text-center">选择符合你喜好的选项，帮助我们为你推荐合适的角色</p>
-      
+
       {/* 职业兴趣 */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -337,25 +388,34 @@ const CharacterCreation: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {interestOptions
             .filter(option => option.category === 'career')
-            .map(option => (
-              <button
-                key={option.id}
-                onClick={() => toggleInterest(option.id)}
-                className={`flex items-center justify-center p-3 rounded-lg border transition-all ${
-                  selectedInterests.includes(option.id)
-                    ? 'border-purple-500 bg-purple-900/30 text-white'
-                    : 'border-gray-700 bg-gray-900/50 text-gray-300 hover:border-purple-700'
-                }`}
-              >
-                <span>{option.name}</span>
-                {selectedInterests.includes(option.id) && (
-                  <FontAwesomeIcon icon={faCheck} className="ml-1 text-purple-500" size="sm" />
-                )}
-              </button>
-            ))}
+            .map(option => {
+              const count = selectedInterests.filter(i => {
+                const opt = interestOptions.find(o => o.id === i);
+                return opt?.category === 'career';
+              }).length;
+              const isFull = count >= MAX_BY_CATEGORY.career && !selectedInterests.includes(option.id);
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => toggleInterest(option.id)}
+                  className={`flex items-center justify-center p-3 rounded-lg border transition-all ${
+                    selectedInterests.includes(option.id)
+                      ? 'border-purple-500 bg-purple-900/30 text-white'
+                      : 'border-gray-700 bg-gray-900/50 text-gray-300 hover:border-purple-700'
+                  } ${isFull ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  disabled={isFull}
+                >
+                  <span>{option.name}</span>
+                  {selectedInterests.includes(option.id) && (
+                    <FontAwesomeIcon icon={faCheck} className="ml-1 text-purple-500" size="sm" />
+                  )}
+                  {isFull && <span className="ml-1 text-xs text-red-300">已满</span>}
+                </button>
+              );
+            })}
         </div>
       </div>
-      
+
       {/* 性格特点 */}
       <div className="mb-6">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -365,25 +425,34 @@ const CharacterCreation: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {interestOptions
             .filter(option => option.category === 'personality')
-            .map(option => (
-              <button
-                key={option.id}
-                onClick={() => toggleInterest(option.id)}
-                className={`flex items-center justify-center p-3 rounded-lg border transition-all ${
-                  selectedInterests.includes(option.id)
-                    ? 'border-purple-500 bg-purple-900/30 text-white'
-                    : 'border-gray-700 bg-gray-900/50 text-gray-300 hover:border-purple-700'
-                }`}
-              >
-                <span>{option.name}</span>
-                {selectedInterests.includes(option.id) && (
-                  <FontAwesomeIcon icon={faCheck} className="ml-1 text-purple-500" size="sm" />
-                )}
-              </button>
-            ))}
+            .map(option => {
+              const count = selectedInterests.filter(i => {
+                const opt = interestOptions.find(o => o.id === i);
+                return opt?.category === 'personality';
+              }).length;
+              const isFull = count >= MAX_BY_CATEGORY.personality && !selectedInterests.includes(option.id);
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => toggleInterest(option.id)}
+                  className={`flex items-center justify-center p-3 rounded-lg border transition-all ${
+                    selectedInterests.includes(option.id)
+                      ? 'border-purple-500 bg-purple-900/30 text-white'
+                      : 'border-gray-700 bg-gray-900/50 text-gray-300 hover:border-purple-700'
+                  } ${isFull ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  disabled={isFull}
+                >
+                  <span>{option.name}</span>
+                  {selectedInterests.includes(option.id) && (
+                    <FontAwesomeIcon icon={faCheck} className="ml-1 text-purple-500" size="sm" />
+                  )}
+                  {isFull && <span className="ml-1 text-xs text-red-300">已满</span>}
+                </button>
+              );
+            })}
         </div>
       </div>
-      
+
       {/* 技能特长 */}
       <div className="mb-8">
         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
@@ -393,25 +462,34 @@ const CharacterCreation: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {interestOptions
             .filter(option => option.category === 'skill')
-            .map(option => (
-              <button
-                key={option.id}
-                onClick={() => toggleInterest(option.id)}
-                className={`flex items-center justify-center p-3 rounded-lg border transition-all ${
-                  selectedInterests.includes(option.id)
-                    ? 'border-purple-500 bg-purple-900/30 text-white'
-                    : 'border-gray-700 bg-gray-900/50 text-gray-300 hover:border-purple-700'
-                }`}
-              >
-                <span>{option.name}</span>
-                {selectedInterests.includes(option.id) && (
-                  <FontAwesomeIcon icon={faCheck} className="ml-1 text-purple-500" size="sm" />
-                )}
-              </button>
-            ))}
+            .map(option => {
+              const count = selectedInterests.filter(i => {
+                const opt = interestOptions.find(o => o.id === i);
+                return opt?.category === 'skill';
+              }).length;
+              const isFull = count >= MAX_BY_CATEGORY.skill && !selectedInterests.includes(option.id);
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => toggleInterest(option.id)}
+                  className={`flex items-center justify-center p-3 rounded-lg border transition-all ${
+                    selectedInterests.includes(option.id)
+                      ? 'border-purple-500 bg-purple-900/30 text-white'
+                      : 'border-gray-700 bg-gray-900/50 text-gray-300 hover:border-purple-700'
+                  } ${isFull ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  disabled={isFull}
+                >
+                  <span>{option.name}</span>
+                  {selectedInterests.includes(option.id) && (
+                    <FontAwesomeIcon icon={faCheck} className="ml-1 text-purple-500" size="sm" />
+                  )}
+                  {isFull && <span className="ml-1 text-xs text-red-300">已满</span>}
+                </button>
+              );
+            })}
         </div>
       </div>
-      
+
       <div className="flex space-x-4 justify-center">
         <button
           onClick={prevStep}
@@ -420,12 +498,18 @@ const CharacterCreation: React.FC = () => {
           上一步
         </button>
         <button
-          onClick={nextStep}
-          disabled={selectedInterests.length < 3}
+          onClick={confirmInterests}
+          disabled={
+            selectedInterests.filter(i => i.startsWith('c')).length === 0 ||
+            selectedInterests.filter(i => i.startsWith('p')).length === 0 ||
+            selectedInterests.filter(i => i.startsWith('s')).length === 0
+          }
           className={`px-6 py-3 rounded-lg font-medium transition-all ${
-            selectedInterests.length >= 3
-              ? 'bg-purple-600 text-white hover:bg-purple-700 active:scale-95'
-              : 'bg-gray-800 text-gray-500 cursor-not-allowed'
+            selectedInterests.filter(i => i.startsWith('c')).length === 0 ||
+            selectedInterests.filter(i => i.startsWith('p')).length === 0 ||
+            selectedInterests.filter(i => i.startsWith('s')).length === 0
+              ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+              : 'bg-purple-600 text-white hover:bg-purple-700 active:scale-95'
           }`}
         >
           完成设置
@@ -478,7 +562,7 @@ const CharacterCreation: React.FC = () => {
           </button>
           <button
             className="px-8 py-3 rounded-lg font-medium transition-all"
-            onClick={submit}
+            onClick={confirmClass}
             disabled={!selectedClass}
             style={{
               backgroundColor: selectedClass ? '#7c3aed' : '#e5e7eb',
