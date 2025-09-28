@@ -10,7 +10,7 @@ export interface CharacterData {
   gender: Gender;
   interests: string[];          // 所有兴趣 id
   mainClass: string;            // 主职业 id
-  subClass?: string;            // 副职业 id（预留）
+  subClass: string;            // 副职业 id（预留）
 }
 
 const defaultData: CharacterData = {
@@ -18,6 +18,7 @@ const defaultData: CharacterData = {
   gender: '',
   interests: [],
   mainClass: '',
+  subClass: '',
 };
 
 export function useCharacterData() {
@@ -43,6 +44,9 @@ export function useCharacterData() {
   const setMainClass = (val: string) =>
     setData(prev => ({ ...prev, mainClass: val }));
 
+  const setSubClass = (val: string) =>
+    setData(prev => ({ ...prev, subClass: val }));
+
   const reset = () => setData(defaultData);
 
   return {
@@ -51,6 +55,7 @@ export function useCharacterData() {
     setGender,
     setInterests,
     setMainClass,
+    setSubClass,
     reset,
   };
 }

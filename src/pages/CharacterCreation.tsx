@@ -1,9 +1,10 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
-import { faCheck, faArrowRight, faVenus, faMars, faBriefcase, faHeart, faStar, faMagic } from '@fortawesome/free-solid-svg-icons';
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { faCheck, faArrowRight, faVenus, faMars, faBriefcase, faHeart, faStar, faMagic, faSyncAlt } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useNavigate } from 'react-router-dom';
 import { useCharacterData } from '../hooks/useCharacterData';
 import '../css/CharacterCreation.css';
+import { getMainClassRecommendation, getSubClassRecommendation } from '../utils/recommend';
 
 // 类型定义保持不变
 type Gender = 'male' | 'female' | '';
@@ -12,7 +13,7 @@ type InterestCategory = 'career' | 'personality' | 'skill';
 interface InterestOption {
   id: string;
   name: string;
-  category: InterestCategory;
+  category: InterestCategory; 
 }
 
 interface CharacterClass  {
@@ -26,15 +27,28 @@ const CharacterCreation: React.FC = () => {
   // 原有状态保持不变
   const nav = useNavigate();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { data, setNickname, setGender, setInterests, setMainClass } = useCharacterData();
+  const { data, setNickname, setGender, setInterests, setMainClass, setSubClass } = useCharacterData();
   const [nickname, setNicknameLocal] = useState('');
   const [gender, setGenderLocal] = useState<Gender>('');
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedMain, setSelectedMain] = useState('');   // 主职业 id
+  const [selectedSub, setSelectedSub] = useState('');     // 副职业 id
   
   // 新增星星容器的ref
   const starsContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleMainChange = (id: string) => {
+    setSelectedMain(id);
+    setSelectedSub('');          // 必清空
+  };
+
+  const SubChange = () =>{
+    setSelectedMain('');
+    setSelectedSub('');
+  }
 
   const submit = () => {
     nav('/generate')
@@ -106,6 +120,7 @@ const CharacterCreation: React.FC = () => {
   ];
 
   // 推荐职业数据
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const characterClasses: CharacterClass[] = [
     { 
       id: 'warrior', 
@@ -185,17 +200,35 @@ const CharacterCreation: React.FC = () => {
     nextStep();
   };
 
-  const confirmInterests = () => {
+  const confirmInterests = async () => {
     setInterests([...selectedInterests]);
+    await new Promise(res => setTimeout(res, 50));
     nextStep();
   };
 
-  const confirmClass = () => {
-    setMainClass(selectedClass);
+  const confirmClass = async () => {
+    setMainClass(selectedMain);
+    await new Promise(res => setTimeout(res, 50));
+    setSubClass(selectedSub);
     setTimeout(() => {
       submit();
     }, 5);
   };
+
+  const mainList = useMemo(
+    () => getMainClassRecommendation(data.interests),
+    [data.interests]
+  );
+  const [subList, setSubList] = useState<Array<{id:string,name:string}>>([]);
+  useEffect(() => {
+    if (selectedMain) {
+      const res = getSubClassRecommendation(data.interests, selectedMain);
+      console.log('【副职业计算结果】', res);
+      setSubList(res);
+    }
+  }, [selectedMain, data.interests]);
+  const refresh = () =>
+    setSubList(getSubClassRecommendation(data.interests, selectedMain));
 
   // 新增：星星随机出现和消失的效果
   useEffect(() => {
@@ -522,28 +555,26 @@ const CharacterCreation: React.FC = () => {
   const renderCharacterClassStep = () => {
     return (
       <div className="flex flex-col">
-        <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">选择职业</h2>
-        <p className="text-gray-500 mb-8 text-center">请选择你想要扮演的职业角色</p>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">选择主职业</h2>
+        <p className="text-gray-500 mb-8 text-center">我们已根据你的兴趣为你推荐以下主职业</p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          {characterClasses.map(cls => (
+          {mainList.map(cls => (
             <button
               key={cls.id}
-              onClick={() => setSelectedClass(cls.id)}
+              onClick={() => handleMainChange(cls.id)}
               className={`rounded-xl p-5 border-2 transition-all w-full text-left cursor-pointer ${
-                selectedClass === cls.id
-                  ? 'border-purple-600 bg-purple-50 shadow-lg scale-[1.02]' 
+                selectedMain === cls.id
+                  ? 'border-purple-600 bg-purple-50 shadow-lg scale-[1.02]'
                   : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
               }`}
             >
               <div className="w-14 h-14 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-4">
-                {cls.icon}
+                <FontAwesomeIcon icon={faStar} size="2x" />
               </div>
               <h3 className="text-xl font-semibold mb-2">{cls.name}</h3>
-              <p className="text-gray-600 text-sm">{cls.description}</p>
-              
-              {/* 选中状态指示器 */}
-              {selectedClass === cls.id && (
+              <p className="text-gray-600 text-sm">系统推荐</p>
+              {selectedMain === cls.id && (
                 <div className="mt-4 flex items-center text-purple-600">
                   <FontAwesomeIcon icon={faCheck} size="sm" className="mr-1" />
                   <span className="text-sm font-medium">已选择</span>
@@ -552,23 +583,69 @@ const CharacterCreation: React.FC = () => {
             </button>
           ))}
         </div>
+
+        {/* 副职业区域（主职业选完才显示） */}
+        {selectedMain && (
+          <>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2 text-center">选择副职业</h2>
+            <p className="text-gray-500 mb-4 text-center">可作为兼职或斜杠身份</p>
+
+            {/* 刷新按钮 */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={refresh}
+                className="px-4 py-2 rounded-lg border border-purple-300 text-purple-600 hover:bg-purple-50 transition-all"
+              >
+                <FontAwesomeIcon icon={faSyncAlt} className="mr-2" size="sm" />
+                换一批
+              </button>
+            </div>
+
+            {/* 副职业 8 卡片（单选） */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+              {subList.map(sub => (
+                <button
+                  key={sub.id}
+                  onClick={() => setSelectedSub(sub.id)}
+                  className={`rounded-xl p-4 border-2 transition-all w-full text-left cursor-pointer ${
+                    selectedSub === sub.id
+                      ? 'border-purple-600 bg-purple-50 shadow-lg scale-[1.02]'
+                      : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-3">
+                    <FontAwesomeIcon icon={faBriefcase} size="lg" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-1">{sub.name}</h3>
+                  <p className="text-gray-600 text-xs">兼职/斜杠</p>
+                  {selectedSub === sub.id && (
+                    <div className="mt-2 flex items-center text-purple-600">
+                      <FontAwesomeIcon icon={faCheck} size="sm" className="mr-1" />
+                      <span className="text-xs font-medium">已选择</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+        
         
         <div className="flex space-x-4 justify-center">
           <button
-            onClick={prevStep}
+            onClick = {function() {prevStep();SubChange();}}
             className="px-6 py-3 rounded-lg font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
           >
             上一步
           </button>
           <button
-            className="px-8 py-3 rounded-lg font-medium transition-all"
             onClick={confirmClass}
-            disabled={!selectedClass}
-            style={{
-              backgroundColor: selectedClass ? '#7c3aed' : '#e5e7eb',
-              color: selectedClass ? 'white' : '#9ca3af',
-              cursor: selectedClass ? 'pointer' : 'not-allowed'
-            }}
+            disabled={!selectedMain || !selectedSub}
+            className={`px-8 py-3 rounded-lg font-medium transition-all ${
+              !selectedMain || !selectedSub
+                ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                : 'bg-purple-600 text-white hover:bg-purple-700 active:scale-95'
+            }`}
           >
             完成创建
             <FontAwesomeIcon icon={faCheck} className="ml-2" size="sm" />

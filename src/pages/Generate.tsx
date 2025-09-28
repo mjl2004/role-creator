@@ -20,6 +20,7 @@ export default function Generate() {
         <div>性别：{data.gender === 'male' ? '男' : '女'}</div>
         <div>兴趣标签：{data.interests.join(', ')}</div>
         <div>主职业：{data.mainClass || '未选择'}</div>
+        <div>副职业：{data.subClass || '未选择'}</div>
       </div>
       {/* 后续把名片像素图放这里 */}
     </div>
