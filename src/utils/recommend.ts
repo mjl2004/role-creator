@@ -136,7 +136,7 @@ export function getMainClassRecommendation(interests: string[]) {
   const userSkills = interests.filter(id => id.startsWith('s'));
   const userCareer = interests.filter(id => id.startsWith('c'));
 
-  // 1. 技能门槛 ≥ 2
+  // 1. 技能门槛 ≥ 1
   const skillCounter = new Map<string, number>();
   userSkills.forEach(sId => {
     (interestToMainClass[sId] || []).forEach(job => {

@@ -3,6 +3,7 @@ import CardForm from './pages/Cardform'
 import Generate from './pages/Generate'
 import CharacterCustomization from './pages/CharacterCustomization'
 import CharacterCreation from './pages/CharacterCreation'
+import ModelGeneration from './pages/ModelGeneration'
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/login" element={<CardForm />} />
         <Route path="/create" element={<CharacterCreation />} />
         <Route path="/generate" element={<Generate />} />
+        <Route path="/generate/model" element={<ModelGeneration />} />
       </Routes>
     </BrowserRouter>
   )
